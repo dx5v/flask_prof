@@ -1,0 +1,18 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# macOS system files
+.DS_Store
+
+# Virtual environment folders (optional)
+env/
+venv/
+.flaskenv
+
+# VSCode config files (optional)
+.vscode/
+
+# Logs and cache
+*.log
+*.sqlite3
