@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Photo App{% endblock %}
+
+{% block body %}
+<header>
+    <h1>Photo App</h1>
+    <nav>
+        <p>{{ current_user.username }}</p>
+        <a href="{{ url_for('logout') }}" style="text-decoration: none;">Sign out</a>
+    </nav>
+</header>
+
+<!-- recommendation panel -->
+<div class="recommendationPanel">
+    <div class="profile">
+        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRThRj7Pxl7D1mikqLJEOXfKrnN7m-b7VKtWg&usqp=CAU" alt="profile_img" />
+        <p id="profileName">{{ current_user.username }}</p>
+    </div>
+    
+    <div class="suggestions">
+        <p id="suggestionsforyou">suggestions for you</p>
+        {% for user in suggested_users %}
+        <div class="suggestedAccount">
+            <img src="https://kb.rspca.org.au/wp-content/uploads/2018/11/golder-retriever-puppy.jpeg" alt="profile_img" />
+            <div class="nameBox">
+                <p class="suggestedPeople">{{ user.username }}</p>
+                <p class="suggestWord">suggested for you</p>
+            </div>
+            <a class="followLink" href="{{ url_for('follow_user', user_id=user.id) }}">follow</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- story panel -->
+<div class="storyPanel">
+    {% for story_user in story_users %}
+    <div class="story">
+        <img src="https://www.utkaltoday.com/wp-content/uploads/2020/09/Rachel-green-Utkal-Today-feat-1.jpg" alt="pic"/>
+        <p>{{ story_user.username }}</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- card panel -->
+<div class="cardPanel">
+    {% for post in posts %}
+    <div class="card">
+        <!-- post header -->
+        <div class="postHeader">
+            <div class="postUser">{{ post.author.username }}</div>
+            <div><em class="fas fa-ellipsis-h"></em></div>
+        </div>
+        
+        <!-- post image placeholder -->
+        <div class="postPic">
+            <img src="{{ url_for('static', filename='images/500x500-dummy-image.jpg') }}" alt="postPic"/>
+        </div>
+        
+        <!-- post content -->
+        <div class="postContent">
+            <div class="icons">
+                <div class="threeIcons">
+                    {% set user_liked = post.id in user_likes %}
+                    <a href="{{ url_for('toggle_like', post_id=post.id) }}">
+                        <em class="fa{% if user_liked %}s{% else %}r{% endif %} fa-heart" style="color: {% if user_liked %}red{% else %}inherit{% endif %}"></em>
+                    </a>
+                    <em class="far fa-comment"></em>
+                    <em class="far fa-paper-plane"></em>
+                </div>
+                <div>
+                    <em class="far fa-bookmark"></em>
+                </div>
+            </div>
+            
+            <p><strong>{{ post.likes|length }} Likes</strong></p>
+            
+            <div class="realContent">
+                <p class="postUser"><strong>{{ post.author.username }}</strong></p>
+                <p>{{ post.caption }}</p>
+            </div>
+            
+            <!-- comments -->
+            <div class="comments">
+                {% for comment in post.comments[:2] %}
+                <div class="comment">
+                    <p class="postUser"><strong>{{ comment.author.username }}</strong></p>
+                    <p>{{ comment.text }}</p>
+                </div>
+                {% endfor %}
+                {% if post.comments|length > 2 %}
+                <p><a href="#" style="color: darkgrey;">View all {{ post.comments|length }} comments</a></p>
+                {% endif %}
+                <div class="postTime" style="color: darkgrey; font: 0.9em sans-serif;">
+                    {{ post.timestamp.strftime('%d %b %Y') }}
+                </div>
+            </div>
+            
+            <!-- add comment -->
+            <div class="addCommentSection">
+                <form method="POST" action="{{ url_for('add_comment', post_id=post.id) }}" class="addCommentForm">
+                    <div class="addComment">
+                        <em class="far fa-smile"></em>
+                        <input name="text" placeholder="Add a comment" required/>
+                    </div>
+                    <button type="submit" style="background: none; border: none; color: #0095f6; cursor: pointer;">Post</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    
+    {% if not posts %}
+    <div class="card">
+        <div style="padding: 40px; text-align: center;">
+            <h3>Welcome to Photo App!</h3>
+            <p>No posts yet. Start following people to see their posts here.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle comment form submissions
+    const commentForms = document.querySelectorAll('.addCommentForm');
+    commentForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const input = form.querySelector('input[name="text"]');
+            if (!input.value.trim()) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
