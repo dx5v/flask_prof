@@ -47,29 +47,37 @@
             });
         });
 
-        // Handle anchor scrolling with offset for fixed header
-        function scrollToAnchor() {
-            if (window.location.hash) {
-                const target = document.querySelector(window.location.hash);
-                if (target) {
-                    const headerHeight = 60; // Match CSS --header-height
-                    const targetPosition = target.offsetTop - headerHeight - 20; // Extra 20px padding
-                    
-                    setTimeout(function() {
-                        window.scrollTo({
-                            top: targetPosition,
-                            behavior: 'smooth'
-                        });
-                    }, 100); // Small delay to ensure page is fully loaded
-                }
+        // Scroll position preservation
+        function preserveScrollPosition() {
+            // Restore scroll position on page load
+            const savedScrollPosition = sessionStorage.getItem('scrollPosition');
+            if (savedScrollPosition) {
+                window.scrollTo(0, parseInt(savedScrollPosition));
+                sessionStorage.removeItem('scrollPosition'); // Clean up after use
             }
         }
 
-        // Handle initial page load with hash
-        scrollToAnchor();
-        
-        // Handle hash changes (if user clicks anchor links)
-        window.addEventListener('hashchange', scrollToAnchor);
+        function saveScrollPosition() {
+            // Save current scroll position before page unload
+            sessionStorage.setItem('scrollPosition', window.scrollY);
+        }
+
+        // Restore scroll position when page loads
+        preserveScrollPosition();
+
+        // Save scroll position before form submissions
+        document.addEventListener('submit', function() {
+            saveScrollPosition();
+        });
+
+        // Save scroll position before link navigation (like/unlike buttons)
+        document.addEventListener('click', function(e) {
+            // Check if clicked element is a link that will cause navigation
+            const link = e.target.closest('a');
+            if (link && link.href && !link.href.includes('#') && !link.href.includes('javascript:')) {
+                saveScrollPosition();
+            }
+        });
     });
     </script>
 </body>

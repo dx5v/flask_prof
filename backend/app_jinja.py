@@ -175,7 +175,7 @@ def toggle_like(post_id):
         db.session.add(like)
         db.session.commit()
     
-    return redirect(url_for('home') + f'#post-{post_id}')
+    return redirect(url_for('home'))
 
 @app.route('/add_comment/<int:post_id>', methods=['POST'])
 def add_comment(post_id):
@@ -192,7 +192,7 @@ def add_comment(post_id):
         db.session.commit()
         flash('Comment added!', 'success')
     
-    return redirect(url_for('home') + f'#post-{post_id}')
+    return redirect(url_for('home'))
 
 @app.route('/create_post', methods=['POST'])
 def create_post():
@@ -221,7 +221,7 @@ def edit_post(post_id):
             post.caption = caption.strip()
             db.session.commit()
             flash('Post updated successfully!', 'success')
-            return redirect(url_for('home') + f'#post-{post_id}')
+            return redirect(url_for('home'))
         else:
             flash('Caption cannot be empty', 'error')
     
@@ -247,7 +247,7 @@ def edit_comment(comment_id):
             comment.text = text.strip()
             db.session.commit()
             flash('Comment updated successfully!', 'success')
-            return redirect(url_for('home') + f'#post-{comment.post_id}')
+            return redirect(url_for('home'))
         else:
             flash('Comment cannot be empty', 'error')
     
@@ -257,11 +257,10 @@ def edit_comment(comment_id):
 @comment_owner_required
 def delete_comment(comment_id):
     comment = Comment.query.get_or_404(comment_id)
-    post_id = comment.post_id  # Store post_id before deleting comment
     db.session.delete(comment)
     db.session.commit()
     flash('Comment deleted successfully!', 'success')
-    return redirect(url_for('home') + f'#post-{post_id}')
+    return redirect(url_for('home'))
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=5001, debug=True)

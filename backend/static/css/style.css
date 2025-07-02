@@ -105,7 +105,6 @@
 html {
   font-size: 16px;
   line-height: var(--line-height-normal);
-  scroll-behavior: smooth;
 }
 
 body {
@@ -388,23 +387,6 @@ a {
   box-shadow: var(--shadow-md);
 }
 
-/* Highlight effect for targeted posts */
-.card:target {
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-md);
-  animation: highlight-fade 2s ease-out;
-}
-
-@keyframes highlight-fade {
-  0% {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px var(--color-primary-light);
-  }
-  100% {
-    border-color: var(--color-primary);
-    box-shadow: var(--shadow-md);
-  }
-}
 
 /* Create Post Card */
 .create-post {
