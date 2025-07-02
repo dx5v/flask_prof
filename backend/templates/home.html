@@ -3,122 +3,181 @@
 {% block title %}Photo App{% endblock %}
 
 {% block body %}
-<header>
-    <h1>Photo App</h1>
-    <nav>
-        <p>{{ current_user.username }}</p>
-        <a href="{{ url_for('logout') }}" style="text-decoration: none;">Sign out</a>
-    </nav>
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<header class="header">
+    <div class="header-container">
+        <h1 class="header-brand">Photo App</h1>
+        <nav class="header-nav">
+            <span class="header-user">{{ current_user.username }}</span>
+            <a href="{{ url_for('logout') }}" class="header-logout">Sign out</a>
+        </nav>
+    </div>
 </header>
 
-<!-- recommendation panel -->
-<div class="recommendationPanel">
-    <div class="profile">
-        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRThRj7Pxl7D1mikqLJEOXfKrnN7m-b7VKtWg&usqp=CAU" alt="profile_img" />
-        <p id="profileName">{{ current_user.username }}</p>
-    </div>
-    
-    <div class="suggestions">
-        <p id="suggestionsforyou">suggestions for you</p>
-        {% for user in suggested_users %}
-        <div class="suggestedAccount">
-            <img src="https://kb.rspca.org.au/wp-content/uploads/2018/11/golder-retriever-puppy.jpeg" alt="profile_img" />
-            <div class="nameBox">
-                <p class="suggestedPeople">{{ user.username }}</p>
-                <p class="suggestWord">suggested for you</p>
-            </div>
-            <a class="followLink" href="{{ url_for('follow_user', user_id=user.id) }}">follow</a>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-
-<!-- story panel -->
-<div class="storyPanel">
-    {% for story_user in story_users %}
-    <div class="story">
-        <img src="https://www.utkaltoday.com/wp-content/uploads/2020/09/Rachel-green-Utkal-Today-feat-1.jpg" alt="pic"/>
-        <p>{{ story_user.username }}</p>
-    </div>
-    {% endfor %}
-</div>
-
-<!-- card panel -->
-<div class="cardPanel">
-    {% for post in posts %}
-    <div class="card">
-        <!-- post header -->
-        <div class="postHeader">
-            <div class="postUser">{{ post.author.username }}</div>
-            <div><em class="fas fa-ellipsis-h"></em></div>
-        </div>
-        
-        <!-- post image placeholder -->
-        <div class="postPic">
-            <img src="{{ url_for('static', filename='images/500x500-dummy-image.jpg') }}" alt="postPic"/>
-        </div>
-        
-        <!-- post content -->
-        <div class="postContent">
-            <div class="icons">
-                <div class="threeIcons">
-                    {% set user_liked = post.id in user_likes %}
-                    <a href="{{ url_for('toggle_like', post_id=post.id) }}">
-                        <em class="fa{% if user_liked %}s{% else %}r{% endif %} fa-heart" style="color: {% if user_liked %}red{% else %}inherit{% endif %}"></em>
-                    </a>
-                    <em class="far fa-comment"></em>
-                    <em class="far fa-paper-plane"></em>
-                </div>
-                <div>
-                    <em class="far fa-bookmark"></em>
-                </div>
-            </div>
-            
-            <p><strong>{{ post.likes|length }} Likes</strong></p>
-            
-            <div class="realContent">
-                <p class="postUser"><strong>{{ post.author.username }}</strong></p>
-                <p>{{ post.caption }}</p>
-            </div>
-            
-            <!-- comments -->
-            <div class="comments">
-                {% for comment in post.comments[:2] %}
-                <div class="comment">
-                    <p class="postUser"><strong>{{ comment.author.username }}</strong></p>
-                    <p>{{ comment.text }}</p>
+<div class="main-container">
+    <main class="main-content" id="main-content">
+        <!-- Stories Section -->
+        <div class="stories">
+            <div class="stories-list">
+                {% for story_user in story_users %}
+                <div class="story">
+                    <div class="story-avatar">
+                        <img src="https://www.utkaltoday.com/wp-content/uploads/2020/09/Rachel-green-Utkal-Today-feat-1.jpg" alt="{{ story_user.username }}'s story"/>
+                    </div>
+                    <p class="story-username">{{ story_user.username }}</p>
                 </div>
                 {% endfor %}
-                {% if post.comments|length > 2 %}
-                <p><a href="#" style="color: darkgrey;">View all {{ post.comments|length }} comments</a></p>
-                {% endif %}
-                <div class="postTime" style="color: darkgrey; font: 0.9em sans-serif;">
-                    {{ post.timestamp.strftime('%d %b %Y') }}
-                </div>
             </div>
-            
-            <!-- add comment -->
-            <div class="addCommentSection">
-                <form method="POST" action="{{ url_for('add_comment', post_id=post.id) }}" class="addCommentForm">
-                    <div class="addComment">
-                        <em class="far fa-smile"></em>
-                        <input name="text" placeholder="Add a comment" required/>
-                    </div>
-                    <button type="submit" style="background: none; border: none; color: #0095f6; cursor: pointer;">Post</button>
+        </div>
+
+        <!-- Create Post Section -->
+        <div class="card">
+            <div class="create-post">
+                <form method="POST" action="{{ url_for('create_post') }}" class="create-post-form">
+                    <textarea name="caption" placeholder="What's on your mind?" rows="3" class="create-post-textarea" required></textarea>
+                    <button type="submit" class="btn-primary">Share</button>
                 </form>
             </div>
         </div>
-    </div>
-    {% endfor %}
-    
-    {% if not posts %}
-    <div class="card">
-        <div style="padding: 40px; text-align: center;">
-            <h3>Welcome to Photo App!</h3>
-            <p>No posts yet. Start following people to see their posts here.</p>
+
+        {% for post in posts %}
+        <article class="card" id="post-{{ post.id }}">
+            <!-- Post Header -->
+            <header class="post-header">
+                <span class="post-user">{{ post.author.username }}</span>
+                <div class="post-actions">
+                    {% if current_user and current_user.id == post.user_id %}
+                    <div class="dropdown">
+                        <button class="dropdown-trigger" aria-label="Post options">
+                            <em class="fas fa-ellipsis-h" aria-hidden="true"></em>
+                        </button>
+                        <div class="dropdown-content">
+                            <a href="{{ url_for('edit_post', post_id=post.id) }}" class="dropdown-item">Edit</a>
+                            <form method="POST" action="{{ url_for('delete_post', post_id=post.id) }}">
+                                <button type="submit" onclick="return confirm('Are you sure you want to delete this post?');" class="dropdown-item danger">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% else %}
+                    <button class="dropdown-trigger" aria-label="Post options">
+                        <em class="fas fa-ellipsis-h" aria-hidden="true"></em>
+                    </button>
+                    {% endif %}
+                </div>
+            </header>
+            
+            <!-- Post Image -->
+            <img src="{{ url_for('static', filename='images/500x500-dummy-image.jpg') }}" alt="Post by {{ post.author.username }}" class="post-image"/>
+            
+            <!-- Post Content -->
+            <div class="post-content">
+                <div class="post-icons">
+                    <div class="post-icons-left">
+                        {% set user_liked = post.id in user_likes %}
+                        <a href="{{ url_for('toggle_like', post_id=post.id) }}" aria-label="{% if user_liked %}Unlike{% else %}Like{% endif %} post">
+                            <em class="fa{% if user_liked %}s{% else %}r{% endif %} fa-heart post-icon{% if user_liked %} liked{% endif %}" aria-hidden="true"></em>
+                        </a>
+                        <button class="post-icon" aria-label="Comment on post">
+                            <em class="far fa-comment" aria-hidden="true"></em>
+                        </button>
+                        <button class="post-icon" aria-label="Share post">
+                            <em class="far fa-paper-plane" aria-hidden="true"></em>
+                        </button>
+                    </div>
+                    <button class="post-icon" aria-label="Save post">
+                        <em class="far fa-bookmark" aria-hidden="true"></em>
+                    </button>
+                </div>
+                
+                <p class="post-likes"><strong>{{ post.likes|length }} likes</strong></p>
+                
+                <div class="post-caption">
+                    <span class="post-user">{{ post.author.username }}</span>
+                    {{ post.caption }}
+                </div>
+            
+                <!-- Comments -->
+                <div class="comments">
+                    {% for comment in post.comments[:2] %}
+                    <div class="comment">
+                        <div class="comment-content">
+                            <div class="comment-text">
+                                <span class="post-user">{{ comment.author.username }}</span>
+                                {{ comment.text }}
+                            </div>
+                            {% if current_user and current_user.id == comment.user_id %}
+                            <div class="comment-actions">
+                                <a href="{{ url_for('edit_comment', comment_id=comment.id) }}" class="comment-action">Edit</a>
+                                <form method="POST" action="{{ url_for('delete_comment', comment_id=comment.id) }}">
+                                    <button type="submit" onclick="return confirm('Are you sure you want to delete this comment?');" class="comment-action">Delete</button>
+                                </form>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if post.comments|length > 2 %}
+                    <p class="text-muted mb-0">
+                        <a href="#" class="text-muted">View all {{ post.comments|length }} comments</a>
+                    </p>
+                    {% endif %}
+                </div>
+
+                <div class="post-time">
+                    {{ post.timestamp.strftime('%d %b %Y') }}
+                </div>
+                
+                <!-- Add Comment -->
+                <div class="add-comment">
+                    <form method="POST" action="{{ url_for('add_comment', post_id=post.id) }}" class="add-comment-form">
+                        <em class="far fa-smile text-muted" aria-hidden="true"></em>
+                        <input name="text" placeholder="Add a comment" class="add-comment-input" required/>
+                        <button type="submit" class="add-comment-button">Post</button>
+                    </form>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+        
+        {% if not posts %}
+        <div class="card">
+            <div class="create-post text-center">
+                <h3>Welcome to Photo App!</h3>
+                <p class="text-muted">No posts yet. Start following people to see their posts here.</p>
+            </div>
         </div>
-    </div>
-    {% endif %}
+        {% endif %}
+    </main>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <!-- Profile Card -->
+        <div class="profile-card">
+            <div class="profile-info">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRThRj7Pxl7D1mikqLJEOXfKrnN7m-b7VKtWg&usqp=CAU" alt="{{ current_user.username }}'s profile" class="profile-avatar" />
+                <div class="profile-details">
+                    <h3>{{ current_user.username }}</h3>
+                    <p class="profile-username">@{{ current_user.username }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Suggestions Card -->
+        <div class="suggestions-card">
+            <h2 class="suggestions-header">Suggestions for you</h2>
+            {% for user in suggested_users %}
+            <div class="suggestion-item">
+                <img src="https://kb.rspca.org.au/wp-content/uploads/2018/11/golder-retriever-puppy.jpeg" alt="{{ user.username }}'s profile" class="suggestion-avatar" />
+                <div class="suggestion-info">
+                    <p class="suggestion-name">{{ user.username }}</p>
+                    <p class="suggestion-label">Suggested for you</p>
+                </div>
+                <a class="suggestion-follow" href="{{ url_for('follow_user', user_id=user.id) }}">Follow</a>
+            </div>
+            {% endfor %}
+        </div>
+    </aside>
 </div>
 
 {% endblock %}

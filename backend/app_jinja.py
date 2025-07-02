@@ -1,6 +1,7 @@
-from flask import Flask, request, render_template, redirect, url_for, flash, session
+from flask import Flask, request, render_template, redirect, url_for, flash, session, get_flashed_messages
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from models import db, User, Post, Like, Comment, followers
+from auth_decorators import login_required, post_owner_required, comment_owner_required, get_current_user
 from datetime import timedelta
 import os
 from dotenv import load_dotenv
@@ -22,11 +23,7 @@ jwt = JWTManager(app)
 with app.app_context():
     db.create_all()
 
-# Helper function to get current user
-def get_current_user():
-    if 'user_id' in session:
-        return User.query.get(session['user_id'])
-    return None
+# Note: get_current_user() is now imported from auth_decorators.py
 
 @app.context_processor
 def inject_user():
@@ -92,6 +89,9 @@ def register():
 
 @app.route('/logout')
 def logout():
+    # Clear any existing flash messages to prevent accumulation
+    get_flashed_messages()
+    
     session.pop('user_id', None)
     flash('You have been logged out', 'info')
     return redirect(url_for('login'))
@@ -175,7 +175,7 @@ def toggle_like(post_id):
         db.session.add(like)
         db.session.commit()
     
-    return redirect(url_for('home'))
+    return redirect(url_for('home') + f'#post-{post_id}')
 
 @app.route('/add_comment/<int:post_id>', methods=['POST'])
 def add_comment(post_id):
@@ -192,7 +192,7 @@ def add_comment(post_id):
         db.session.commit()
         flash('Comment added!', 'success')
     
-    return redirect(url_for('home'))
+    return redirect(url_for('home') + f'#post-{post_id}')
 
 @app.route('/create_post', methods=['POST'])
 def create_post():
@@ -209,6 +209,59 @@ def create_post():
         flash('Post created!', 'success')
     
     return redirect(url_for('home'))
+
+@app.route('/edit_post/<int:post_id>', methods=['GET', 'POST'])
+@post_owner_required
+def edit_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    
+    if request.method == 'POST':
+        caption = request.form.get('caption')
+        if caption and caption.strip():
+            post.caption = caption.strip()
+            db.session.commit()
+            flash('Post updated successfully!', 'success')
+            return redirect(url_for('home') + f'#post-{post_id}')
+        else:
+            flash('Caption cannot be empty', 'error')
+    
+    return render_template('edit_post.html', post=post)
+
+@app.route('/delete_post/<int:post_id>', methods=['POST'])
+@post_owner_required
+def delete_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    db.session.delete(post)
+    db.session.commit()
+    flash('Post deleted successfully!', 'success')
+    return redirect(url_for('home'))
+
+@app.route('/edit_comment/<int:comment_id>', methods=['GET', 'POST'])
+@comment_owner_required
+def edit_comment(comment_id):
+    comment = Comment.query.get_or_404(comment_id)
+    
+    if request.method == 'POST':
+        text = request.form.get('text')
+        if text and text.strip():
+            comment.text = text.strip()
+            db.session.commit()
+            flash('Comment updated successfully!', 'success')
+            return redirect(url_for('home') + f'#post-{comment.post_id}')
+        else:
+            flash('Comment cannot be empty', 'error')
+    
+    return render_template('edit_comment.html', comment=comment)
+
+@app.route('/delete_comment/<int:comment_id>', methods=['POST'])
+@comment_owner_required
+def delete_comment(comment_id):
+    comment = Comment.query.get_or_404(comment_id)
+    post_id = comment.post_id  # Store post_id before deleting comment
+    db.session.delete(comment)
+    db.session.commit()
+    flash('Comment deleted successfully!', 'success')
+    return redirect(url_for('home') + f'#post-{post_id}')
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=5001, debug=True)

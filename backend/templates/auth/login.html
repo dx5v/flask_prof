@@ -16,8 +16,12 @@
         {% endwith %}
         
         <form method="POST" action="{{ url_for('login') }}">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="password" name="password" placeholder="Password" required>
+            <div class="auth-form-group">
+                <input type="text" name="username" placeholder="Username" required aria-label="Username">
+            </div>
+            <div class="auth-form-group">
+                <input type="password" name="password" placeholder="Password" required aria-label="Password">
+            </div>
             <button type="submit">Log In</button>
         </form>
         

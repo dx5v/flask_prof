@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Post - Photo App{% endblock %}
+
+{% block body %}
+<div class="auth-container">
+    <div class="auth-form">
+        <h1>Edit Post</h1>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" action="{{ url_for('edit_post', post_id=post.id) }}">
+            <div class="auth-form-group">
+                <textarea name="caption" placeholder="Caption" rows="4" class="create-post-textarea" required>{{ post.caption }}</textarea>
+            </div>
+            <button type="submit">Update Post</button>
+            <p>
+                <a href="{{ url_for('home') }}" class="auth-link">Cancel</a>
+            </p>
+        </form>
+    </div>
+</div>
+{% endblock %}
