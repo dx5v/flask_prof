@@ -1,0 +1,16 @@
+# Testing dependencies for Flask Social Media Application
+
+# Core testing framework
+pytest>=7.4.0
+pytest-flask>=1.2.0
+pytest-cov>=4.1.0
+
+# Testing utilities
+pytest-mock>=3.11.0
+factory-boy>=3.3.0
+
+# Coverage reporting
+coverage>=7.2.0
+
+# Include main application dependencies
+-r requirements.txt

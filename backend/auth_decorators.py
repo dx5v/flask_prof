@@ -1,6 +1,7 @@
 from functools import wraps
 from flask import session, redirect, url_for, flash, abort
 from models import User, Post, Comment
+import logging
 
 
 def get_current_user():
@@ -33,6 +34,19 @@ def post_owner_required(f):
         post = Post.query.get_or_404(post_id)
         
         if post.user_id != current_user.id:
+            # Log unauthorized access attempt
+            security_logger = logging.getLogger('security')
+            security_logger.warning(
+                "Unauthorized post access attempt",
+                extra={
+                    'event_type': 'unauthorized_access',
+                    'resource_type': 'post',
+                    'resource_id': post_id,
+                    'user_id': current_user.id,
+                    'owner_id': post.user_id,
+                    'attempted_action': f.__name__
+                }
+            )
             abort(403)  # Forbidden
         
         return f(post_id, *args, **kwargs)
@@ -51,6 +65,19 @@ def comment_owner_required(f):
         comment = Comment.query.get_or_404(comment_id)
         
         if comment.user_id != current_user.id:
+            # Log unauthorized access attempt
+            security_logger = logging.getLogger('security')
+            security_logger.warning(
+                "Unauthorized comment access attempt",
+                extra={
+                    'event_type': 'unauthorized_access',
+                    'resource_type': 'comment',
+                    'resource_id': comment_id,
+                    'user_id': current_user.id,
+                    'owner_id': comment.user_id,
+                    'attempted_action': f.__name__
+                }
+            )
             abort(403)  # Forbidden
         
         return f(comment_id, *args, **kwargs)
