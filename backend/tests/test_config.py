@@ -26,7 +26,6 @@ class TestConfig:
     TESTING = True
     WTF_CSRF_ENABLED = False
     SECRET_KEY = 'test-secret-key'
-    JWT_SECRET_KEY = 'test-jwt-secret'
     
     # Disable logging during tests to reduce noise
     LOG_LEVEL = 'CRITICAL'
@@ -39,6 +38,10 @@ def create_test_app():
     
     # Initialize database
     db.init_app(app)
+    
+    # Initialize auth middleware for testing
+    from auth_middleware import AuthMiddleware
+    AuthMiddleware(app)
     
     # Setup minimal logging for tests
     import logging

@@ -9,7 +9,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
-from flask import request, g
+from flask import request, g, session
 import traceback
 
 
@@ -36,9 +36,13 @@ class StructuredFormatter(logging.Formatter):
             'process': record.process,
         }
         
-        # Add correlation ID if available
-        if hasattr(g, 'correlation_id'):
-            log_entry['correlation_id'] = g.correlation_id
+        # Add correlation ID if available (only within app context)
+        try:
+            if hasattr(g, 'correlation_id'):
+                log_entry['correlation_id'] = g.correlation_id
+        except RuntimeError:
+            # No application context, skip correlation ID
+            pass
         
         # Add request context if available
         if request:
@@ -52,13 +56,17 @@ class StructuredFormatter(logging.Formatter):
                 }
                 
                 # Add user context if authenticated
-                if hasattr(g, 'current_user') and g.current_user:
-                    log_entry['user'] = {
-                        'id': g.current_user.id,
-                        'username': g.current_user.username
-                    }
-                elif 'user_id' in session:
-                    log_entry['user'] = {'id': session['user_id']}
+                try:
+                    if hasattr(g, 'current_user') and g.current_user:
+                        log_entry['user'] = {
+                            'id': g.current_user.id,
+                            'username': g.current_user.username
+                        }
+                    elif 'user_id' in session:
+                        log_entry['user'] = {'id': session['user_id']}
+                except (RuntimeError, NameError):
+                    # No application context for g object or session not available
+                    pass
                     
             except RuntimeError:
                 # Outside request context

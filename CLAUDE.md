@@ -35,6 +35,9 @@ Social media application with Flask backend and server-side rendered frontend us
 # Install dependencies
 pip install -r backend/requirements.txt
 
+# Install test dependencies
+pip install -r backend/requirements-test.txt
+
 # Set up environment variables
 cp backend/.env.example backend/.env
 # Edit .env with your DATABASE_URL, SECRET_KEY, JWT_SECRET_KEY
@@ -51,6 +54,28 @@ python backend/app_jinja.py
 
 # Seed database with sample data
 python backend/seed_data.py
+```
+
+### Testing
+```bash
+# Run all tests with coverage (from backend directory)
+python run_tests.py --all
+
+# Run specific test categories
+python run_tests.py --auth          # Authentication tests
+python run_tests.py --models        # Database model tests
+python run_tests.py --routes        # Route/endpoint tests
+python run_tests.py --logging       # Logging system tests
+python run_tests.py --security      # Security tests
+python run_tests.py --fast          # Fast tests (exclude slow)
+
+# Direct pytest usage
+python -m pytest                    # Run all tests
+python -m pytest tests/test_auth.py -v  # Run specific test file
+python -m pytest -m unit           # Run unit tests only
+
+# Clean test artifacts
+python run_tests.py --clean
 ```
 
 ### Database Operations
@@ -81,3 +106,18 @@ Home feed shows posts from followed users + own posts, ordered by timestamp desc
 
 ### Template Structure
 All pages extend `base.html` which includes navigation, flash messages, and common styling. Server-side rendering handles all user interactions through form submissions and redirects.
+
+### Logging System
+- **Industrial-grade logging** with structured JSON format and multiple log files
+- **Log files**: `application.log`, `security.log`, `audit.log`, `performance.log`, `errors.log`
+- **Correlation IDs** for request tracking across all log entries
+- **Decorators** available: `@log_execution_time()`, `@log_user_action()`
+- **Event types**: Authentication, authorization, business events, performance metrics
+- **Configuration**: Via environment variables (`LOG_LEVEL`, `LOG_DIR`, `FLASK_ENV`)
+
+### Testing Architecture
+- **Pytest-based** test suite with comprehensive coverage
+- **Test categories**: unit, integration, auth, models, routes, logging, security
+- **Test runner**: `backend/run_tests.py` with multiple options
+- **Coverage reporting**: HTML reports generated in `htmlcov/`
+- **Test isolation**: In-memory SQLite database for fast execution

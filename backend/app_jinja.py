@@ -1,10 +1,9 @@
-from flask import Flask, request, render_template, redirect, url_for, flash, session, get_flashed_messages
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask import Flask, request, render_template, redirect, url_for, flash, session, get_flashed_messages, g
 from models import db, User, Post, Like, Comment, followers
-from auth_decorators import login_required, post_owner_required, comment_owner_required, get_current_user
+from auth_middleware import AuthMiddleware
+from auth_decorators import post_owner_required, comment_owner_required
 from logging_config import LoggingConfig, setup_request_logging
 from social_media_logger import social_logger, log_execution_time, log_user_action
-from datetime import timedelta
 import os
 from dotenv import load_dotenv
 
@@ -15,11 +14,9 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///social_media.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-string')
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1)
 
 db.init_app(app)
-jwt = JWTManager(app)
+auth_middleware = AuthMiddleware(app)
 
 # Initialize logging system
 LoggingConfig.setup_logging(app)
@@ -30,17 +27,17 @@ with app.app_context():
     db.create_all()
     app.logger.info("Database tables initialized")
 
-# Note: get_current_user() is now imported from auth_decorators.py
-
 @app.context_processor
 def inject_user():
-    return dict(current_user=get_current_user())
+    return dict(current_user=g.current_user)
 
 @app.route('/')
 def index():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
     return redirect(url_for('home'))
+
+@app.route('/favicon.ico')
+def favicon():
+    return '', 204  # No Content - favicon not provided
 
 @app.route('/login', methods=['GET', 'POST'])
 @log_execution_time('user_login')
@@ -61,10 +58,12 @@ def login():
         user = User.query.filter_by(username=username).first()
         
         if user and user.check_password(password):
-            session['user_id'] = user.id
-            social_logger.log_login_attempt(username, success=True)
+            auth_middleware.login_user(user)
             flash('Login successful!', 'success')
-            return redirect(url_for('home'))
+            
+            # Redirect to next URL if available
+            next_url = session.pop('next_url', None)
+            return redirect(next_url or url_for('home'))
         else:
             social_logger.log_login_attempt(
                 username,
@@ -116,7 +115,7 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        session['user_id'] = user.id
+        auth_middleware.login_user(user)
         social_logger.log_registration(username, user.id)
         flash('Registration successful! Welcome to Photo App!', 'success')
         return redirect(url_for('home'))
@@ -129,22 +128,13 @@ def logout():
     # Clear any existing flash messages to prevent accumulation
     get_flashed_messages()
     
-    user_id = session.get('user_id')
-    if user_id:
-        user = get_current_user()
-        username = user.username if user else 'unknown'
-        social_logger.log_logout(user_id, username)
-    
-    session.pop('user_id', None)
+    auth_middleware.logout_user()
     flash('You have been logged out', 'info')
     return redirect(url_for('login'))
 
 @app.route('/home')
 def home():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    current_user = get_current_user()
+    current_user = g.current_user
     
     # Get posts from followed users and own posts
     following_ids = [u.id for u in current_user.followed]
@@ -172,10 +162,7 @@ def home():
 @app.route('/follow/<int:user_id>')
 @log_user_action('follow_user')
 def follow_user(user_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    current_user = get_current_user()
+    current_user = g.current_user
     user_to_follow = User.query.get_or_404(user_id)
     
     if current_user.id == user_id:
@@ -196,10 +183,7 @@ def follow_user(user_id):
 @app.route('/unfollow/<int:user_id>')
 @log_user_action('unfollow_user')
 def unfollow_user(user_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    current_user = get_current_user()
+    current_user = g.current_user
     user_to_unfollow = User.query.get_or_404(user_id)
     
     current_user.unfollow(user_to_unfollow)
@@ -212,10 +196,7 @@ def unfollow_user(user_id):
 @app.route('/toggle_like/<int:post_id>')
 @log_user_action('toggle_like')
 def toggle_like(post_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    current_user = get_current_user()
+    current_user = g.current_user
     post = Post.query.get_or_404(post_id)
     
     existing_like = Like.query.filter_by(user_id=current_user.id, post_id=post_id).first()
@@ -235,10 +216,7 @@ def toggle_like(post_id):
 @app.route('/add_comment/<int:post_id>', methods=['POST'])
 @log_user_action('add_comment')
 def add_comment(post_id):
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    current_user = get_current_user()
+    current_user = g.current_user
     post = Post.query.get_or_404(post_id)
     text = request.form.get('text')
     
@@ -256,10 +234,7 @@ def add_comment(post_id):
 @app.route('/create_post', methods=['POST'])
 @log_user_action('create_post')
 def create_post():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    current_user = get_current_user()
+    current_user = g.current_user
     caption = request.form.get('caption')
     
     if caption and caption.strip():
@@ -286,7 +261,7 @@ def edit_post(post_id):
             post.caption = caption.strip()
             db.session.commit()
             social_logger.log_post_edit(
-                post_id, session['user_id'], old_caption, caption.strip()
+                post_id, g.current_user.id, old_caption, caption.strip()
             )
             flash('Post updated successfully!', 'success')
             return redirect(url_for('home'))
@@ -304,7 +279,7 @@ def delete_post(post_id):
     comments_count = len(post.comments)
     
     social_logger.log_post_deletion(
-        post_id, session['user_id'], likes_count, comments_count
+        post_id, g.current_user.id, likes_count, comments_count
     )
     
     db.session.delete(post)
@@ -325,7 +300,7 @@ def edit_comment(comment_id):
             comment.text = text.strip()
             db.session.commit()
             social_logger.log_comment_edit(
-                comment_id, session['user_id'], old_text, text.strip()
+                comment_id, g.current_user.id, old_text, text.strip()
             )
             flash('Comment updated successfully!', 'success')
             return redirect(url_for('home'))
@@ -341,7 +316,7 @@ def delete_comment(comment_id):
     comment = Comment.query.get_or_404(comment_id)
     post_id = comment.post_id
     
-    social_logger.log_comment_deletion(comment_id, post_id, session['user_id'])
+    social_logger.log_comment_deletion(comment_id, post_id, g.current_user.id)
     
     db.session.delete(comment)
     db.session.commit()
